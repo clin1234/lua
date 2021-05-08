@@ -4253,12 +4253,8 @@ If the new top is greater than the old one,
 then the new elements are filled with @nil.
 If @id{index} @N{is 0}, then all stack elements are removed.
 
-For compatibility reasons,
-this function may close slots marked as to-be-closed @see{lua_toclose},
-and therefore it can run arbitrary code.
-You should not rely on this behavior:
-Instead, always close to-be-closed slots explicitly,
-with @Lid{lua_closeslot}, before removing them from the stack.
+This function can run arbitrary code when removing an index
+marked as to-be-closed from the stack.
 
 }
 
@@ -4347,19 +4343,22 @@ otherwise, returns @id{NULL}.
 @apii{0,0,m}
 
 Marks the given index in the stack as a
-to-be-closed @Q{variable} @see{to-be-closed}.
+to-be-closed slot @see{to-be-closed}.
 Like a to-be-closed variable in Lua,
-the value at that index in the stack will be closed
+the value at that slot in the stack will be closed
 when it goes out of scope.
 Here, in the context of a C function,
 to go out of scope means that the running function returns to Lua,
-there is an error,
+or there is an error,
+or the slot is removed from the stack through
+@Lid{lua_settop} or @Lid{lua_pop},
 or there is a call to @Lid{lua_closeslot}.
-An index marked as to-be-closed should neither be removed from the stack
-nor modified before a corresponding call to @Lid{lua_closeslot}.
+A slot marked as to-be-closed should not be removed from the stack
+by any other function in the API except @Lid{lua_settop} or @Lid{lua_pop},
+unless previously deactivated by @Lid{lua_closeslot}.
 
 This function should not be called for an index
-that is equal to or below an active to-be-closed index.
+that is equal to or below an active to-be-closed slot.
 
 Note that, both in case of errors and of a regular return,
 by the time the @idx{__close} metamethod runs,
@@ -5916,6 +5915,9 @@ previously pushed on the stack
 on top of the library table.
 These values are popped from the stack after the registration.
 
+A function with a @id{NULL} value represents a placeholder,
+which is filled with @false.
+
 }
 
 @APIEntry{void luaL_setmetatable (lua_State *L, const char *tname);|
@@ -6398,7 +6400,7 @@ This means that any error @N{inside @T{f}} is not propagated;
 instead, @id{pcall} catches the error
 and returns a status code.
 Its first result is the status code (a boolean),
-which is true if the call succeeds without errors.
+which is @true if the call succeeds without errors.
 In such case, @id{pcall} also returns all results from the call,
 after this first result.
 In case of any error, @id{pcall} returns @false plus the error object.
@@ -6604,7 +6606,7 @@ an object with type @T{"thread"}.
 
 @LibEntry{coroutine.isyieldable ([co])|
 
-Returns true when the coroutine @id{co} can yield.
+Returns @true when the coroutine @id{co} can yield.
 The default for @id{co} is the running coroutine.
 
 A coroutine is yieldable if it is not the main thread and
@@ -6636,7 +6638,7 @@ If there is any error,
 @LibEntry{coroutine.running ()|
 
 Returns the running coroutine plus a boolean,
-true when the running coroutine is the main one.
+@true when the running coroutine is the main one.
 
 }
 
@@ -6731,7 +6733,7 @@ If the loader returns any non-nil value,
 @id{require} assigns the returned value to @T{package.loaded[modname]}.
 If the loader does not return a non-nil value and
 has not assigned any value to @T{package.loaded[modname]},
-then @id{require} assigns @Rw{true} to this entry.
+then @id{require} assigns @true to this entry.
 In any case, @id{require} returns the
 final value of @T{package.loaded[modname]}.
 Besides that value, @id{require} also returns as a second result
@@ -7052,7 +7054,7 @@ otherwise, it returns @fail.
 A third, optional numeric argument @id{init} specifies
 where to start the search;
 its default value @N{is 1} and can be negative.
-A value of @true as a fourth, optional argument @id{plain}
+A @true as a fourth, optional argument @id{plain}
 turns off the pattern matching facilities,
 so the function does a plain @Q{find substring} operation,
 with no characters in @id{pattern} being considered magic.
@@ -8078,7 +8080,7 @@ or @fail if @id{x} is not a number.
 @LibEntry{math.ult (m, n)|
 
 Returns a boolean,
-true if and only if integer @id{m} is below integer @id{n} when
+@true if and only if integer @id{m} is below integer @id{n} when
 they are compared as @x{unsigned integers}.
 
 }
@@ -8491,13 +8493,13 @@ When called without a @id{command},
 @LibEntry{os.exit ([code [, close]])|
 
 Calls the @ANSI{exit} to terminate the host program.
-If @id{code} is @Rw{true},
+If @id{code} is @true,
 the returned status is @idx{EXIT_SUCCESS};
-if @id{code} is @Rw{false},
+if @id{code} is @false,
 the returned status is @idx{EXIT_FAILURE};
 if @id{code} is a number,
 the returned status is this number.
-The default value for @id{code} is @Rw{true}.
+The default value for @id{code} is @true.
 
 If the optional second argument @id{close} is true,
 closes the Lua state before exiting.
